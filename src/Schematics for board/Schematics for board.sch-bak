@@ -13,23 +13,23 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
-Text Label 2750 3200 0    50   ~ 0
+Text Label 9950 900  0    50   ~ 0
 SDA
-Text Label 2750 3300 0    50   ~ 0
+Text Label 9950 1000 0    50   ~ 0
 SCL
-Text Notes 3200 3050 0    50   ~ 0
+Text Notes 10400 750  0    50   ~ 0
 Available PWM Pins
-Text Label 3600 3150 2    50   ~ 0
+Text Label 10800 850  2    50   ~ 0
 D3
-Text Label 3600 3250 2    50   ~ 0
+Text Label 10800 950  2    50   ~ 0
 D5
-Text Label 3600 3350 2    50   ~ 0
+Text Label 10800 1050 2    50   ~ 0
 D6
-Text Label 3600 3450 2    50   ~ 0
+Text Label 10800 1150 2    50   ~ 0
 D9
-Text Label 3600 3550 2    50   ~ 0
+Text Label 10800 1250 2    50   ~ 0
 D10
-Text Label 3600 3650 2    50   ~ 0
+Text Label 10800 1350 2    50   ~ 0
 D11
 $Comp
 L MCU_Module:Arduino_Nano_v3.x A?
@@ -42,15 +42,15 @@ F 3 "http://www.mouser.com/pdfdocs/Gravitech_Arduino_Nano3_0.pdf" H 5250 2600 50
 	1    5250 3600
 	1    0    0    -1  
 $EndComp
-Text Label 2550 3200 2    50   ~ 0
+Text Label 9750 900  2    50   ~ 0
 A4
-Text Label 2550 3300 2    50   ~ 0
+Text Label 9750 1000 2    50   ~ 0
 A5
 Wire Wire Line
-	2550 3200 2750 3200
+	9750 900  9950 900 
 Wire Wire Line
-	2550 3300 2750 3300
-Text Notes 2550 3050 0    50   ~ 0
+	9750 1000 9950 1000
+Text Notes 9750 750  0    50   ~ 0
 I2C Pins
 Text Notes 600  650  0    50   ~ 0
 RTC Pin Requirements
@@ -572,14 +572,6 @@ Text Label 4600 3400 2    50   ~ 0
 D4
 Wire Wire Line
 	4600 3400 4750 3400
-Text Label 4800 6300 2    50   ~ 0
-D7
-Wire Wire Line
-	4800 6300 4950 6300
-Text Label 4600 3700 2    50   ~ 0
-D7
-Wire Wire Line
-	4600 3700 4750 3700
 Text Notes 5150 5650 0    50   ~ 0
 16x2 Char LCD
 Text Notes 5100 2050 0    50   ~ 0
@@ -588,12 +580,12 @@ Text Notes 7100 1500 0    50   ~ 0
 Buzzer
 Text Notes 7950 2400 0    50   ~ 0
 Pot(entiometer)
-Text Notes 9900 1750 0    50   ~ 0
+Text Notes 11300 50   0    50   ~ 0
 RTC Breakout board
 Text Notes 1750 4250 0    50   ~ 0
 Motor Driver
-Text Notes 1050 1650 0    50   ~ 0
-4 User Usable Buttons
+Text Notes 1050 1600 0    50   ~ 0
+4 User Usable Buttons\nArduino Pins with pull-ups
 Text Label 4600 3800 2    50   ~ 0
 D8
 Wire Wire Line
@@ -700,12 +692,27 @@ Text Label 4800 7000 2    50   ~ 0
 D6
 Text Label 4800 7100 2    50   ~ 0
 D12
-Text Label 4800 7200 2    50   ~ 0
-D13
 NoConn ~ 4950 6500
 NoConn ~ 4950 6600
 NoConn ~ 4950 6700
 NoConn ~ 4950 6800
 Text Notes 7300 3750 0    50   ~ 0
 RGB LED\n
+$Comp
+L power:GND #PWR?
+U 1 1 5E2C8739
+P 4700 6300
+F 0 "#PWR?" H 4700 6050 50  0001 C CNN
+F 1 "GND" V 4705 6172 50  0000 R CNN
+F 2 "" H 4700 6300 50  0001 C CNN
+F 3 "" H 4700 6300 50  0001 C CNN
+	1    4700 6300
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	4700 6300 4950 6300
+Text Label 4800 7200 2    50   ~ 0
+D7
+Text Label 4600 3700 2    50   ~ 0
+D7
 $EndSCHEMATC
