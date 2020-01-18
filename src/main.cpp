@@ -16,7 +16,7 @@
 #define SCROLL_LENGTH 64
 
 // How frequently (intervals of LCD_REFRESH_RATE) to scroll the text
-#define SCROLL_RATE 8
+#define SCROLL_RATE 4
 
 // How frequently (intervals of LCD_REFRESH_RATE) to blink selections
 #define BLINK_RATE 4
@@ -44,9 +44,18 @@
 // Buzzer Pin
 #define BUZZER_PIN 3
 
+// Motor Pin
+#define MOTOR_PIN 2
+
 // Seven Segment Display Pins
 #define TM1637_CLK 11
 #define TM1637_DIO 10
+
+// Water Level Potentiometer Pin
+#define WATER_SENSOR_PIN A6
+
+// Water Level Warning LED Pin
+#define WATER_LOW_LED_PIN 13
 
 enum Page {
     STANDBY,
@@ -95,6 +104,9 @@ bool snoozed = false;
 
 // Whether or not alarm has rung
 bool rang = false;
+
+// Whether or not the water is low
+bool waterLow = false;
 
 // Draw a string centered within a row on the 16x2 LCD
 void drawCentered(const char *str, uint8_t row) {
@@ -197,6 +209,11 @@ void setup() {
 
     pinMode(BUZZER_PIN, OUTPUT);
 
+    pinMode(WATER_LOW_LED_PIN, OUTPUT);
+
+    pinMode(MOTOR_PIN, OUTPUT);
+    digitalWrite(MOTOR_PIN, LOW);
+
     if (!rtc.begin()) {
         exit(0);
     }
@@ -209,6 +226,8 @@ void setup() {
 
     display.setBrightness(0x0f);
     display.clear();
+
+    alarm = rtc.now() + TimeSpan(0, 0, 0, 15);
 }
 
 void loop() {
@@ -447,6 +466,7 @@ void loop() {
 
             if ((secs <= 5) && (secs > 0)) {
                 static uint8_t counted = 6;
+
                 if (counted != secs) {
                     tone(BUZZER_PIN, 1000, 500);
                     counted = secs;
@@ -454,23 +474,44 @@ void loop() {
             }
 
             if (secs <= 0) {
+                static bool motorEnabled = false;
                 tone(BUZZER_PIN, 1250, 20);
+
+                if (!motorEnabled && !waterLow) {
+                    digitalWrite(MOTOR_PIN, HIGH);
+                    motorEnabled = true;
+                } else if (motorEnabled && waterLow) {
+                    digitalWrite(MOTOR_PIN, LOW);
+                    motorEnabled = false;
+                }
+
             }
 
             if (secs <= -5) {
                 rang = true;
                 snoozed = false;
+                digitalWrite(MOTOR_PIN, LOW);
             }
 
             if (secs > 0) {
                 display.showNumberDecEx(diff.minutes(), 0b01000000, true, 2, 0);
                 display.showNumberDecEx(diff.seconds(), 0b01000000, true, 2, 2);
-            } else {
+            } else if (!rang) {
                 display.showNumberDecEx(0, 0b01000000, true, 2, 0);
                 display.showNumberDecEx(0, 0b01000000, true, 2, 2);
+            } else {
+                display.clear();
             }
-
         }
+    }
+
+    // Water Level Sensing
+    int16_t sensorValue = analogRead(WATER_SENSOR_PIN);
+    if ((sensorValue >= 600) && (sensorValue <= 800)) {
+        digitalWrite(WATER_LOW_LED_PIN, HIGH);
+    } else if (!waterLow) {
+        digitalWrite(WATER_LOW_LED_PIN, LOW);
+        waterLow = true;
     }
 
     loopCount++;
