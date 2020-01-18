@@ -226,8 +226,6 @@ void setup() {
 
     display.setBrightness(0x0f);
     display.clear();
-
-    alarm = rtc.now() + TimeSpan(0, 0, 0, 15);
 }
 
 void loop() {
@@ -239,9 +237,9 @@ void loop() {
     }
     uint32_t loopStart = millis();
 
-    Press lButton = getButtonPressState(LEFT_BUTTON_PIN, false);
-    Press mButton = getButtonPressState(MIDDLE_BUTTON_PIN, false);
-    Press rButton = getButtonPressState(RIGHT_BUTTON_PIN, false);
+    Press lButton = getButtonPressState(LEFT_BUTTON_PIN, true);
+    Press mButton = getButtonPressState(MIDDLE_BUTTON_PIN, true);
+    Press rButton = getButtonPressState(RIGHT_BUTTON_PIN, true);
     Press sButton = getButtonPressState(SNOOZE_BUTTON_PIN, false);
 
     // Update selection
@@ -514,6 +512,7 @@ void loop() {
         waterLow = true;
     }
 
+    // If the loop has taken less than 20 milliseconds, delay so that it takes 20.
     loopCount++;
     uint32_t loopTime = millis() - loopStart;
     if (loopTime < LOOP_DELAY) {
