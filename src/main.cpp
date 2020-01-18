@@ -2,9 +2,6 @@
 #include <RTClib.h>
 #include <LiquidCrystal.h>
 
-// Gap between the end of the scroll and the repeating start.
-#define SCROLL_GAP 1
-
 // Max length of scrolling info string
 #define SCROLL_LENGTH 64
 
@@ -87,26 +84,14 @@ void drawScroll(const char *str, uint8_t row, uint8_t freq) {
     uint8_t len = strlen(str);
 
     char buf[LCD_LENGTH + 1];
-    if (offset < SCROLL_GAP) {
-        uint8_t gapLength = min(LCD_LENGTH, SCROLL_GAP - offset);
-        memset(buf, ' ', gapLength);
+    uint8_t pos = 0;
+    pos = min(len - offset, LCD_LENGTH);
+    strncpy(buf, &str[offset], pos);
 
-        strncpy(&buf[gapLength], &str[offset], min(len - offset, LCD_LENGTH - gapLength));
-    } else {
-        strncpy(buf, &str[offset], min(len - offset, LCD_LENGTH));
-    }
-
-    uint8_t pos = min(LCD_LENGTH - 1, len - offset);
-    while (pos < (LCD_LENGTH - 1)) {
-        uint8_t gapLength = min((LCD_LENGTH - 1) - pos, SCROLL_GAP);
-        memset(&buf[pos], ' ', gapLength);
-        pos += gapLength;
-
-        if (pos < (LCD_LENGTH - 1)) {
-            uint8_t nextLen = min((LCD_LENGTH - 1) - pos, (int) len);
-            strncpy(&buf[pos], str, nextLen);
-            pos += nextLen;
-        }
+    while (pos < (LCD_LENGTH)) {
+        uint8_t nextLen = min((LCD_LENGTH) - pos, (int) len);
+        strncpy(&buf[pos], str, nextLen);
+        pos += nextLen;
     }
     buf[LCD_LENGTH] = '\0';
 
@@ -123,10 +108,10 @@ void setScroll(char *str) {
     DateTime now = rtc.now();
     int pos = 0;
 
-    snprintf(str, SCROLL_LENGTH, "%02d/%02d/%04d ALARM: %02d:%02d:%02d ", now.month(), now.day(), now.year(), alarm.hour(), alarm.minute(), alarm.second());
+    snprintf(str, SCROLL_LENGTH, "%02d/%02d/%04d ALARM: %02d:%02d:%02d ", now.month(), now.day(), now.year(),
+             alarm.hour(), alarm.minute(), alarm.second());
     pos = strlen(str);
 
-    //TODO; Have all days displayed and days that are on blinking.
     char *end = &str[pos];
     for (int i = 0; i < 7; i++) {
         if (alarmDays[i] && ((blink % BLINK_FREQ) != 0)) {
@@ -135,6 +120,7 @@ void setScroll(char *str) {
             *(end++) = ' ';
         }
     }
+    *end++ = ' ';
     *end = '\0';
 }
 
