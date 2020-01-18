@@ -8,20 +8,25 @@
 // Max length of scrolling info string
 #define SCROLL_LENGTH 64
 
+// How frequently (measured in loop() calls) to scroll the text.
+#define SCROLL_FREQ 8
+
+// How frequently (measured in loop() calls) to blink selections.
+#define BLINK_FREQ 8
+
 // Length of LCD (characters)
 #define LCD_LENGTH 16
 
 // Pins for LCD
 #define LCD_RS  4
-#define LCD_E   6
-#define LCD_D4  8
-#define LCD_D5  9
-#define LCD_D6  15
-#define LCD_D7  16
+#define LCD_E   8
+#define LCD_D4  5
+#define LCD_D5  6
+#define LCD_D6  12
+#define LCD_D7  7
+
 
 const char daysOfTheWeek[7] = {'S', 'M', 'T', 'W', 'R', 'F', 'S'};
-
-LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 
 enum state {
     STANDBY,
@@ -30,6 +35,8 @@ enum state {
     SETTING_ALARM,
     SETTING_ALARM_DAYS
 };
+
+LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 
 // Current state for state machine in loop()
 state currState = STANDBY;
@@ -44,13 +51,16 @@ RTC_PCF8523 rtc;
 DateTime alarm;
 
 // Alarm set days
-bool alarmDays[7] = {false, true, false, false, false, false, false};
+bool alarmDays[7] = {true, true, true, true, true, true, true};
 
 // Represents selection number when setting day / time / alarm time / alarm days.
 uint8_t selection = 0;
 
+// Represents when to blink selections.
+uint8_t blink = 0;
+
 // Draw a string centered within a row on the 16x2 LCD
-void drawCentered(const char* str, uint8_t row) {
+void drawCentered(const char *str, uint8_t row) {
     uint8_t len = strlen(str);
 
     if (len > LCD_LENGTH) {
@@ -66,53 +76,66 @@ void drawCentered(const char* str, uint8_t row) {
 // Displays a time, centered
 void drawCenteredTime(DateTime time, uint8_t row) {
     char buf[9];
-    snprintf(buf, 8, "%02d:%02d:%02d", time.hour(), time.minute(), time.second());
+    snprintf(buf, 9, "%02d:%02d:%02d", time.hour(), time.minute(), time.second());
     drawCentered(buf, row);
 }
 
 // Draws scrolling text
-void drawScroll(const char* str, uint8_t row, uint8_t offset) {
+void drawScroll(const char *str, uint8_t row, uint8_t freq) {
+    static uint16_t realOffset = 0;
+    uint8_t offset = realOffset / freq;
     uint8_t len = strlen(str);
 
     char buf[LCD_LENGTH + 1];
-    strncpy(buf, &str[offset], LCD_LENGTH);
-    uint8_t pos = min(LCD_LENGTH, len - offset);
+    if (offset < SCROLL_GAP) {
+        uint8_t gapLength = min(LCD_LENGTH, SCROLL_GAP - offset);
+        memset(buf, ' ', gapLength);
+
+        strncpy(&buf[gapLength], &str[offset], min(len - offset, LCD_LENGTH - gapLength));
+    } else {
+        strncpy(buf, &str[offset], min(len - offset, LCD_LENGTH));
+    }
+
+    uint8_t pos = min(LCD_LENGTH - 1, len - offset);
     while (pos < (LCD_LENGTH - 1)) {
         uint8_t gapLength = min((LCD_LENGTH - 1) - pos, SCROLL_GAP);
         memset(&buf[pos], ' ', gapLength);
         pos += gapLength;
 
         if (pos < (LCD_LENGTH - 1)) {
-            uint8_t nextLen = min((LCD_LENGTH - 1) - pos, len);
+            uint8_t nextLen = min((LCD_LENGTH - 1) - pos, (int) len);
             strncpy(&buf[pos], str, nextLen);
             pos += nextLen;
         }
     }
     buf[LCD_LENGTH] = '\0';
 
-    lcd.setCursor(0, row);
+    lcd.setCursor(0, 1);
     lcd.print(buf);
+
+    realOffset++;
+    if (realOffset == (freq * len)) {
+        realOffset = 0;
+    }
 }
 
-void setScroll(char* str) {
+void setScroll(char *str) {
     DateTime now = rtc.now();
     int pos = 0;
 
-    snprintf(str, 11, "%02d/%02d/%04d ", now.month(), now.day(), now.year());
-    pos += 11;
-
-    snprintf(&str[pos], 16, "ALARM: %02d:%02d:%02d ", alarm.hour(), alarm.minute(), alarm.second());
-    pos += 16;
+    snprintf(str, SCROLL_LENGTH, "%02d/%02d/%04d ALARM: %02d:%02d:%02d ", now.month(), now.day(), now.year(), alarm.hour(), alarm.minute(), alarm.second());
+    pos = strlen(str);
 
     //TODO; Have all days displayed and days that are on blinking.
-    char* end = &str[pos];
+    char *end = &str[pos];
     for (int i = 0; i < 7; i++) {
-        if (alarmDays[i]) {
-            *end++ = daysOfTheWeek[i];
+        if (alarmDays[i] && ((blink % BLINK_FREQ) != 0)) {
+            *(end++) = daysOfTheWeek[i];
         } else {
-            *end++ = ' ';
+            *(end++) = ' ';
         }
     }
+    *end = '\0';
 }
 
 void setup() {
@@ -122,15 +145,16 @@ void setup() {
     }
     Serial.print("Wire Initialized!");
 
-    if (! rtc.begin()) {
+    if (!rtc.begin()) {
         Serial.println("Couldn't find RTC");
         exit(0);
     }
 
-    if (! rtc.initialized()) {
+    if (!rtc.initialized()) {
         Serial.println("RTC is NOT running!");
     }
 
+    lcd.begin(16, 2);
     setScroll(scroll);
 }
 
@@ -140,15 +164,11 @@ void loop() {
     // State Machine
     switch (currState) {
         case STANDBY: {
+            setScroll(scroll);
+
             lcd.clear();
             drawCenteredTime(rtc.now(), 0);
-
-            static int offset = 0;
-            drawScroll(scroll, 1, 0);
-            offset++;
-            if (offset == sizeof(scroll)) {
-                offset = 0;
-            }
+            drawScroll(scroll, 1, SCROLL_FREQ);
             break;
         }
         case SETTING_TIME: {
@@ -193,5 +213,6 @@ void loop() {
             break;
     }
 
-    delay(50);
+    blink++;
+    delay(100);
 }
