@@ -2,20 +2,29 @@
 #include <RTClib.h>
 #include <LiquidCrystal.h>
 
-// Max length of scrolling info string
-#define SCROLL_LENGTH 64
-
-// How frequently (measured in loop() calls) to scroll the text
-#define SCROLL_FREQ 16
-
-// How frequently (measured in loop() calls) to blink selections
-#define BLINK_FREQ 8
+// Delay between loops (milliseconds)
+#define LOOP_DELAY 20
 
 // Length of LCD (characters)
 #define LCD_LENGTH 16
 
-// Delay between loops (milliseconds)
-#define LOOP_DELAY 50
+// LCD refresh interval (milliseconds)
+#define LCD_REFRESH_RATE 100
+
+// Max length of scrolling info string
+#define SCROLL_LENGTH 64
+
+// How frequently (intervals of LCD_REFRESH_RATE) to scroll the text
+#define SCROLL_RATE 12
+
+// How frequently (intervals of LCD_REFRESH_RATE) to blink selections
+#define BLINK_RATE 8
+
+// Short press time threshold (milliseconds)
+#define SHORT_PRESS_TIME 50
+
+// Long press time threshold (milliseconds)
+#define LONG_PRESS_TIME 2000
 
 // Pins for LCD
 #define LCD_RS  4
@@ -67,8 +76,8 @@ bool alarmDays[7] = {true, false, true, false, true, false, true};
 // Represents selection number when setting day / time / alarm time / alarm days.
 uint8_t selection = 0;
 
-// Represents when to blink selections.
-uint8_t blink = 0;
+// Represents # of loop calls
+uint32_t loopCount = 0;
 
 // Draw a string centered within a row on the 16x2 LCD
 void drawCentered(const char *str, uint8_t row) {
@@ -92,9 +101,9 @@ void drawCenteredTime(DateTime time, uint8_t row) {
 }
 
 // Draws scrolling text
-void drawScroll(const char *str, uint8_t row, uint8_t freq) {
+void drawScroll(const char *str, uint8_t row, uint16_t rate) {
     static uint16_t realOffset = 0;
-    uint8_t offset = realOffset / freq;
+    uint8_t offset = realOffset / rate;
     uint8_t len = strlen(str);
 
     char buf[LCD_LENGTH + 1];
@@ -113,13 +122,12 @@ void drawScroll(const char *str, uint8_t row, uint8_t freq) {
     lcd.print(buf);
 
     realOffset++;
-    if (realOffset == (freq * len)) {
+    if (realOffset == (rate * len)) {
         realOffset = 0;
     }
 }
 
-void setScroll(char *str) {
-    DateTime now = rtc.now();
+void setScroll(char *str, DateTime now) {
     int pos = 0;
 
     snprintf(str, SCROLL_LENGTH, "%02d/%02d/%04d ALARM: %02d:%02d:%02d ", now.month(), now.day(), now.year(),
@@ -129,7 +137,7 @@ void setScroll(char *str) {
     char *end = &str[pos];
     for (uint8_t i = 0; i < 7; i++) {
         if (alarmDays[i]) {
-            if ((blink % (2 * BLINK_FREQ)) > BLINK_FREQ) {
+            if ((loopCount % (2 * BLINK_RATE)) > BLINK_RATE) {
                 *(end++) = daysOfTheWeek[i];
             } else {
                 *(end++) = ' ';
@@ -143,31 +151,32 @@ void setScroll(char *str) {
 }
 
 Press getButtonPressState(uint8_t pin) {
-    static uint8_t downFor[8];
+    static uint16_t downFor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t index = pin - A0;
-    if (digitalRead(pin)) {
+    if (!digitalRead(pin)) {
         downFor[index]++;
         // Goal is to only report press once. If you hold it down for longer
         // than required, it should have no effect.
-        if (downFor[index] == (1000 / LOOP_DELAY)) {
+        if (downFor[index] == (LONG_PRESS_TIME / LOOP_DELAY)) {
             return LONG_PRESS;
         }
     } else {
-        uint8_t last = downFor[index];
+        uint16_t last = downFor[index];
         downFor[index] = 0;
-        if ((last > (250 / LOOP_DELAY)) && (last < (1000 / LOOP_DELAY))) {
+        if ((last > (SHORT_PRESS_TIME / LOOP_DELAY)) && (last < (LONG_PRESS_TIME / LOOP_DELAY))) {
             return SHORT_PRESS;
         }
-        return NO_PRESS;
     }
+
+    return NO_PRESS;
 }
 
 void setup() {
-    pinMode(LEFT_BUTTON_PIN, INPUT);
-    pinMode(MIDDLE_BUTTON_PIN, INPUT);
-    pinMode(RIGHT_BUTTON_PIN, INPUT);
-    pinMode(SNOOZE_BUTTON_PIN, INPUT);
+    pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(MIDDLE_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(SNOOZE_BUTTON_PIN, INPUT_PULLUP);
 
     if (!rtc.begin()) {
         exit(0);
@@ -181,6 +190,9 @@ void setup() {
 }
 
 void loop() {
+    DateTime now = rtc.now();
+    uint32_t loopStart = millis();
+
     Press lButton = getButtonPressState(LEFT_BUTTON_PIN);
     Press mButton = getButtonPressState(MIDDLE_BUTTON_PIN);
     Press rButton = getButtonPressState(RIGHT_BUTTON_PIN);
@@ -189,7 +201,10 @@ void loop() {
     // Update selection
     if (mButton == SHORT_PRESS) {
         uint8_t selectionMax = 0;
-        switch(currState) {
+        switch (currState) {
+            case STANDBY:
+                selectionMax = 0;
+                break;
             case SETTING_ALARM_DAYS:
                 selectionMax = 5;
                 break;
@@ -207,7 +222,7 @@ void loop() {
             selection = 0;
         }
     } else if (mButton == LONG_PRESS) { // Switch Page
-        switch(currState) {
+        switch (currState) {
             case STANDBY:
             case SETTING_TIME:
             case SETTING_DATE:
@@ -225,11 +240,13 @@ void loop() {
     // Page State Machine
     switch (currState) {
         case STANDBY: {
-            setScroll(scroll);
+            if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
+                setScroll(scroll, now);
 
-            lcd.clear();
-            drawCenteredTime(rtc.now(), 0);
-            drawScroll(scroll, 1, SCROLL_FREQ);
+                lcd.clear();
+                drawCenteredTime(now, 0);
+                drawScroll(scroll, 1, SCROLL_RATE);
+            }
             break;
         }
         case SETTING_TIME: {
@@ -251,12 +268,14 @@ void loop() {
                 }
             }
 
-            lcd.clear();
-            drawCenteredTime(rtc.now(), 0);
-            drawCentered("TIME", 1);
+            if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
+                lcd.clear();
+                drawCenteredTime(now, 0);
+                drawCentered("TIME", 1);
 
-            lcd.setCursor(5 + selection * 3, 0);
-            lcd.blink();
+                lcd.setCursor(5 + selection * 3, 0);
+                lcd.blink();
+            }
             break;
         }
         case SETTING_DATE: {
@@ -278,21 +297,21 @@ void loop() {
                 }
             }
 
-            DateTime now = rtc.now();
-            char buf[11];
+            if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
+                char buf[11];
+                snprintf(buf, 11, "%02d/%02d/%04d ", now.month(), now.day(), now.year());
 
-            snprintf(buf, 11, "%02d/%02d/%04d ", now.month(), now.day(), now.year());
+                lcd.clear();
+                drawCentered(buf, 0);
+                drawCentered("DATE", 1);
 
-            lcd.clear();
-            drawCentered(buf, 0);
-            drawCentered("DATE", 1);
-
-            if (selection < 2) {
-                lcd.setCursor(4 + selection * 3, 0);
-            } else {
-                lcd.setCursor(12, 0);
+                if (selection < 2) {
+                    lcd.setCursor(4 + selection * 3, 0);
+                } else {
+                    lcd.setCursor(12, 0);
+                }
+                lcd.blink();
             }
-            lcd.blink();
             break;
         }
         case SETTING_ALARM: {
@@ -314,12 +333,14 @@ void loop() {
                 }
             }
 
-            lcd.clear();
-            drawCenteredTime(alarm, 0);
-            drawCentered("ALARM TIME", 1);
+            if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
+                lcd.clear();
+                drawCenteredTime(alarm, 0);
+                drawCentered("ALARM TIME", 1);
 
-            lcd.setCursor(5 + selection * 3, 0);
-            lcd.blink();
+                lcd.setCursor(5 + selection * 3, 0);
+                lcd.blink();
+            }
             break;
         }
         case SETTING_ALARM_DAYS: {
@@ -328,28 +349,31 @@ void loop() {
                 alarmDays[selection] = on;
             }
 
-            char dayBuf[14] = "             ";
-            for (uint8_t i = 0; i < 7; i++) {
-                if (alarmDays[i]) {
-                    if ((blink % (2 * BLINK_FREQ)) > BLINK_FREQ) {
+            if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
+                char dayBuf[14] = "             ";
+                for (uint8_t i = 0; i < 7; i++) {
+                    if (alarmDays[i]) {
+                        if ((loopCount % (2 * BLINK_RATE)) > BLINK_RATE) {
+                            dayBuf[i * 2] = daysOfTheWeek[i];
+                        }
+                    } else {
                         dayBuf[i * 2] = daysOfTheWeek[i];
                     }
-                } else {
-                    dayBuf[i * 2] = daysOfTheWeek[i];
                 }
-            }
-            lcd.clear();
-            drawCentered(dayBuf, 0);
-            drawCentered("ALARM DAYS", 1);
 
-            lcd.setCursor(2 + selection * 2, 0);
-            lcd.blink();
+                lcd.clear();
+                drawCentered(dayBuf, 0);
+                drawCentered("ALARM DAYS", 1);
+
+                lcd.setCursor(2 + selection * 2, 0);
+                lcd.blink();
+            }
             break;
         }
         default:
             break;
     }
 
-    blink++;
-    delay(LOOP_DELAY);
+    loopCount++;
+    delay(min(10 - (millis() - loopStart), 20));
 }
