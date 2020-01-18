@@ -150,13 +150,13 @@ Press getButtonPressState(uint8_t pin) {
         downFor[index]++;
         // Goal is to only report press once. If you hold it down for longer
         // than required, it should have no effect.
-        if (downFor[index] == (250 / LOOP_DELAY)) {
+        if (downFor[index] == (1000 / LOOP_DELAY)) {
             return LONG_PRESS;
         }
     } else {
         uint8_t last = downFor[index];
         downFor[index] = 0;
-        if ((last > 0) && (last < (250 / LOOP_DELAY))) {
+        if ((last > (250 / LOOP_DELAY)) && (last < (1000 / LOOP_DELAY))) {
             return SHORT_PRESS;
         }
         return NO_PRESS;
