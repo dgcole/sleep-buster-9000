@@ -26,7 +26,9 @@ LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 enum state {
     STANDBY,
     SETTING_TIME,
-    SETTING_ALARM
+    SETTING_DATE,
+    SETTING_ALARM,
+    SETTING_ALARM_DAYS
 };
 
 // Current state for state machine in loop()
@@ -44,8 +46,11 @@ DateTime alarm;
 // Alarm set days
 bool alarmDays[7] = {false, true, false, false, false, false, false};
 
+// Represents selection number when setting day / time / alarm time / alarm days.
+uint8_t selection = 0;
+
 // Draw a string centered within a row on the 16x2 LCD
-void drawCentered(char* str, uint8_t row) {
+void drawCentered(const char* str, uint8_t row) {
     uint8_t len = strlen(str);
 
     if (len > LCD_LENGTH) {
@@ -58,7 +63,15 @@ void drawCentered(char* str, uint8_t row) {
     lcd.print(str);
 }
 
-void drawScroll(char* str, uint8_t row, uint8_t offset) {
+// Displays a time, centered
+void drawCenteredTime(DateTime time, uint8_t row) {
+    char buf[9];
+    snprintf(buf, 8, "%02d:%02d:%02d", time.hour(), time.minute(), time.second());
+    drawCentered(buf, row);
+}
+
+// Draws scrolling text
+void drawScroll(const char* str, uint8_t row, uint8_t offset) {
     uint8_t len = strlen(str);
 
     char buf[LCD_LENGTH + 1];
@@ -91,6 +104,7 @@ void setScroll(char* str) {
     snprintf(&str[pos], 16, "ALARM: %02d:%02d:%02d ", alarm.hour(), alarm.minute(), alarm.second());
     pos += 16;
 
+    //TODO; Have all days displayed and days that are on blinking.
     char* end = &str[pos];
     for (int i = 0; i < 7; i++) {
         if (alarmDays[i]) {
@@ -121,15 +135,13 @@ void setup() {
 }
 
 void loop() {
+    // State Transitions
+
+    // State Machine
     switch (currState) {
         case STANDBY: {
-            DateTime now = rtc.now();
-
-            char buf[9];
-            snprintf(buf, 8, "%02d:%02d:%02d", now.hour(), now.minute(), now.second());
-
             lcd.clear();
-            drawCentered(buf, 0);
+            drawCenteredTime(rtc.now(), 0);
 
             static int offset = 0;
             drawScroll(scroll, 1, 0);
@@ -139,8 +151,44 @@ void loop() {
             }
             break;
         }
-        case SETTING_TIME:
-        case SETTING_ALARM:
+        case SETTING_TIME: {
+            lcd.clear();
+            drawCenteredTime(rtc.now(), 0);
+            drawCentered("SET TIME", 1);
+
+            lcd.setCursor(4 + selection * 3, 0);
+            lcd.blink();
+        }
+        case SETTING_DATE: {
+            DateTime now = rtc.now();
+            char buf[11];
+
+            snprintf(buf, 11, "%02d/%02d/%04d ", now.month(), now.day(), now.year());
+
+            lcd.clear();
+            drawCentered(buf, 0);
+            drawCentered("SET DATE", 1);
+
+            lcd.setCursor(4 + selection * 3, 0);
+            lcd.blink();
+        }
+        case SETTING_ALARM: {
+            lcd.clear();
+            drawCenteredTime(alarm, 0);
+            drawCentered("SET TIME", 1);
+
+            lcd.setCursor(4 + selection * 3, 0);
+            lcd.blink();
+        }
+        case SETTING_ALARM_DAYS: {
+            lcd.clear();
+            //TODO; Make selected days blink.
+            drawCentered("S M T W R F S", 0);
+            drawCentered("SET ALARM DAYS", 1);
+
+            lcd.setCursor(2 + selection * 2, 0);
+            lcd.blink();
+        }
         default:
             break;
     }
