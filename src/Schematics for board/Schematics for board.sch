@@ -465,8 +465,6 @@ Text Label 1150 2150 2    50   ~ 0
 A2
 Text Label 1150 2450 2    50   ~ 0
 A3
-Text Label 1150 2750 2    50   ~ 0
-A6
 Wire Wire Line
 	1150 1850 1300 1850
 Wire Wire Line
@@ -481,16 +479,12 @@ Text Label 5850 3800 0    50   ~ 0
 A2
 Text Label 5850 3900 0    50   ~ 0
 A3
-Text Label 5850 4200 0    50   ~ 0
-A6
 Wire Wire Line
 	5850 3700 5750 3700
 Wire Wire Line
 	5750 3800 5850 3800
 Wire Wire Line
 	5850 4100 5750 4100
-Wire Wire Line
-	5750 4200 5850 4200
 $Comp
 L Display_Character:RC1602A U?
 U 1 1 5E26958F
@@ -811,4 +805,10 @@ Wire Wire Line
 	7700 5200 7750 5200
 Wire Wire Line
 	7750 5300 7700 5300
+Text Label 4600 3100 2    50   ~ 0
+D1
+Wire Wire Line
+	4600 3100 4750 3100
+Text Label 1150 2750 2    50   ~ 0
+D1
 $EndSCHEMATC
