@@ -572,14 +572,6 @@ Text Label 4600 3400 2    50   ~ 0
 D4
 Wire Wire Line
 	4600 3400 4750 3400
-Text Label 4800 6300 2    50   ~ 0
-D7
-Wire Wire Line
-	4800 6300 4950 6300
-Text Label 4600 3700 2    50   ~ 0
-D7
-Wire Wire Line
-	4600 3700 4750 3700
 Text Notes 5150 5650 0    50   ~ 0
 16x2 Char LCD
 Text Notes 5100 2050 0    50   ~ 0
@@ -588,7 +580,7 @@ Text Notes 7100 1500 0    50   ~ 0
 Buzzer
 Text Notes 7950 2400 0    50   ~ 0
 Pot(entiometer)
-Text Notes 9900 1750 0    50   ~ 0
+Text Notes 11300 50   0    50   ~ 0
 RTC Breakout board
 Text Notes 1750 4250 0    50   ~ 0
 Motor Driver
@@ -700,12 +692,31 @@ Text Label 4800 7000 2    50   ~ 0
 D6
 Text Label 4800 7100 2    50   ~ 0
 D12
-Text Label 4800 7200 2    50   ~ 0
-D13
 NoConn ~ 4950 6500
 NoConn ~ 4950 6600
 NoConn ~ 4950 6700
 NoConn ~ 4950 6800
 Text Notes 7300 3750 0    50   ~ 0
 RGB LED\n
+$Comp
+L power:GND #PWR?
+U 1 1 5E2C8739
+P 4700 6300
+F 0 "#PWR?" H 4700 6050 50  0001 C CNN
+F 1 "GND" V 4705 6172 50  0000 R CNN
+F 2 "" H 4700 6300 50  0001 C CNN
+F 3 "" H 4700 6300 50  0001 C CNN
+	1    4700 6300
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	4700 6300 4950 6300
+Text Label 4800 7200 2    50   ~ 0
+D7
+Text Label 4600 3700 2    50   ~ 0
+D7
+Text Label 4600 4200 2    50   ~ 0
+D12
+Wire Wire Line
+	4600 4200 4750 4200
 $EndSCHEMATC
