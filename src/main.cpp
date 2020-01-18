@@ -9,16 +9,16 @@
 #define LCD_LENGTH 16
 
 // LCD refresh interval (milliseconds)
-#define LCD_REFRESH_RATE 100
+#define LCD_REFRESH_RATE 250
 
 // Max length of scrolling info string
 #define SCROLL_LENGTH 64
 
 // How frequently (intervals of LCD_REFRESH_RATE) to scroll the text
-#define SCROLL_RATE 12
+#define SCROLL_RATE 8
 
 // How frequently (intervals of LCD_REFRESH_RATE) to blink selections
-#define BLINK_RATE 8
+#define BLINK_RATE 4
 
 // Short press time threshold (milliseconds)
 #define SHORT_PRESS_TIME 50
@@ -137,7 +137,7 @@ void setScroll(char *str, DateTime now) {
     char *end = &str[pos];
     for (uint8_t i = 0; i < 7; i++) {
         if (alarmDays[i]) {
-            if ((loopCount % (2 * BLINK_RATE)) > BLINK_RATE) {
+            if (((loopCount / (LCD_REFRESH_RATE / LOOP_DELAY)) % (2 * BLINK_RATE)) < BLINK_RATE) {
                 *(end++) = daysOfTheWeek[i];
             } else {
                 *(end++) = ' ';
@@ -255,13 +255,13 @@ void loop() {
 
                 switch(selection) {
                     case 0:
-                        rtc.adjust(DateTime(0, 0, 0, dir, 0, 0));
+                        rtc.adjust(now + TimeSpan(0, dir, 0, 0));
                         break;
                     case 1:
-                        rtc.adjust(DateTime(0, 0, 0, 0, dir, 0));
+                        rtc.adjust(now + TimeSpan(0, 0, dir, 0));
                         break;
                     case 2:
-                        rtc.adjust(DateTime(0, 0, 0, 0, 0, dir));
+                        rtc.adjust(now + TimeSpan(0, 0, 0, dir));
                         break;
                     default:
                         break;
@@ -284,14 +284,35 @@ void loop() {
 
                 switch(selection) {
                     case 0:
-                        rtc.adjust(DateTime(0, dir, 0, 0, 0, 0));
+                        rtc.adjust(now + TimeSpan(dir, 0, 0, 0));
                         break;
-                    case 1:
-                        rtc.adjust(DateTime(0, 0, dir, 0, 0, 0));
+                    case 1: {
+                        uint16_t year = now.year();
+                        uint16_t month = now.month();
+                        if ((month == 12) && (dir == 1)) {
+                            year++;
+                            month = 1;
+                        } else if ((month == 1) && (dir == -1)) {
+                            year--;
+                            month = 12;
+                        } else {
+                            month += dir;
+                        }
+                        rtc.adjust(DateTime(year, month, now.day(), now.hour(), now.minute(), now.second()));
                         break;
-                    case 2:
-                        rtc.adjust(DateTime(dir, 0, 0, 0, 0, 0));
+                    }
+                    case 2: {
+                        uint16_t year = now.year();
+                        if ((year == 9999) && (dir == 1)) {
+                            year = 0;
+                        } else if ((year == 0) && (dir == -1)) {
+                            year = 9999;
+                        } else {
+                            year += dir;
+                        }
+                        rtc.adjust(DateTime(year, now.month(), now.day(), now.hour(), now.minute(), now.second()));
                         break;
+                    }
                     default:
                         break;
                 }
@@ -316,17 +337,17 @@ void loop() {
         }
         case SETTING_ALARM: {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
-                int8_t dir = (rButton != NO_PRESS) -(lButton != NO_PRESS);
+                int8_t dir = ((int8_t) (rButton != NO_PRESS)) - ((int8_t) (lButton != NO_PRESS));
 
                 switch(selection) {
                     case 0:
-                        alarm = DateTime(alarm.year(), alarm.month(), alarm.day(), alarm.hour() + 1, alarm.minute(), alarm.second());
+                        alarm = alarm + TimeSpan(0, dir, 0, 0);
                         break;
                     case 1:
-                        alarm = DateTime(alarm.year(), alarm.month(), alarm.day(), alarm.hour(), alarm.minute() + 1, alarm.second());
+                        alarm = alarm + TimeSpan(0, 0, dir, 0);
                         break;
                     case 2:
-                        alarm = DateTime(alarm.year(), alarm.month(), alarm.day(), alarm.hour(), alarm.minute(), alarm.second() + 1);
+                        alarm = alarm + TimeSpan(0, 0, 0, dir);
                         break;
                     default:
                         break;
@@ -344,16 +365,15 @@ void loop() {
             break;
         }
         case SETTING_ALARM_DAYS: {
-            if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
-                bool on = (rButton != NO_PRESS) && (lButton == NO_PRESS);
-                alarmDays[selection] = on;
+            if (rButton != NO_PRESS) {
+                alarmDays[selection] = true;
             }
 
             if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
                 char dayBuf[14] = "             ";
                 for (uint8_t i = 0; i < 7; i++) {
                     if (alarmDays[i]) {
-                        if ((loopCount % (2 * BLINK_RATE)) > BLINK_RATE) {
+                        if (((loopCount / (LCD_REFRESH_RATE / LOOP_DELAY)) % (2 * BLINK_RATE)) < BLINK_RATE) {
                             dayBuf[i * 2] = daysOfTheWeek[i];
                         }
                     } else {
@@ -375,5 +395,7 @@ void loop() {
     }
 
     loopCount++;
-    delay(min(10 - (millis() - loopStart), 20));
+    if ((millis() - loopStart) < LOOP_DELAY) {
+        delay(LOOP_DELAY - (millis() - loopStart));
+    }
 }
