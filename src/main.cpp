@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <RTClib.h>
 #include <LiquidCrystal.h>
+#include <TM1637Display.h>
 
 // Delay between loops (milliseconds)
 #define LOOP_DELAY 20
@@ -24,7 +25,7 @@
 #define SHORT_PRESS_TIME 50
 
 // Long press time threshold (milliseconds)
-#define LONG_PRESS_TIME 2000
+#define LONG_PRESS_TIME 1500
 
 // Pins for LCD
 #define LCD_RS  4
@@ -38,7 +39,14 @@
 #define LEFT_BUTTON_PIN     A1
 #define MIDDLE_BUTTON_PIN   A2
 #define RIGHT_BUTTON_PIN    A3
-#define SNOOZE_BUTTON_PIN   A6
+#define SNOOZE_BUTTON_PIN   1
+
+// Buzzer Pin
+#define BUZZER_PIN 3
+
+// Seven Segment Display Pins
+#define TM1637_CLK 11
+#define TM1637_DIO 10
 
 enum Page {
     STANDBY,
@@ -67,17 +75,26 @@ char scroll[SCROLL_LENGTH] = "";
 // Real-time clock
 RTC_PCF8523 rtc;
 
+// Seven Segment Display
+TM1637Display display(TM1637_CLK, TM1637_DIO);
+
 // Alarm time
-DateTime alarm;
+DateTime alarm(0, 0, 0, 0, 0, 0);
 
 // Alarm set days
 bool alarmDays[7] = {true, false, true, false, true, false, true};
 
-// Represents selection number when setting day / time / alarm time / alarm days.
+// Represents selection number when setting day / time / alarm time / alarm days
 uint8_t selection = 0;
 
 // Represents # of loop calls
 uint32_t loopCount = 0;
+
+// Whether or not the alarm has been snoozed
+bool snoozed = false;
+
+// Whether or not alarm has rung
+bool rang = false;
 
 // Draw a string centered within a row on the 16x2 LCD
 void drawCentered(const char *str, uint8_t row) {
@@ -150,11 +167,11 @@ void setScroll(char *str, DateTime now) {
     *end = '\0';
 }
 
-Press getButtonPressState(uint8_t pin) {
+Press getButtonPressState(uint8_t pin, bool on) {
     static uint16_t downFor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t index = pin - A0;
-    if (!digitalRead(pin)) {
+    if (on == digitalRead(pin)) {
         downFor[index]++;
         // Goal is to only report press once. If you hold it down for longer
         // than required, it should have no effect.
@@ -178,6 +195,8 @@ void setup() {
     pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
     pinMode(SNOOZE_BUTTON_PIN, INPUT_PULLUP);
 
+    pinMode(BUZZER_PIN, OUTPUT);
+
     if (!rtc.begin()) {
         exit(0);
     }
@@ -187,16 +206,24 @@ void setup() {
     }
 
     lcd.begin(16, 2);
+
+    display.setBrightness(0x0f);
+    display.clear();
 }
 
 void loop() {
     DateTime now = rtc.now();
+
+    // Reset alarm
+    if ((now.hour() == 0) && (now.minute() == 0) && (now.second() == 0) && rang) {
+        rang = false;
+    }
     uint32_t loopStart = millis();
 
-    Press lButton = getButtonPressState(LEFT_BUTTON_PIN);
-    Press mButton = getButtonPressState(MIDDLE_BUTTON_PIN);
-    Press rButton = getButtonPressState(RIGHT_BUTTON_PIN);
-    Press sButton = getButtonPressState(SNOOZE_BUTTON_PIN);
+    Press lButton = getButtonPressState(LEFT_BUTTON_PIN, false);
+    Press mButton = getButtonPressState(MIDDLE_BUTTON_PIN, false);
+    Press rButton = getButtonPressState(RIGHT_BUTTON_PIN, false);
+    Press sButton = getButtonPressState(SNOOZE_BUTTON_PIN, false);
 
     // Update selection
     if (mButton == SHORT_PRESS) {
@@ -251,9 +278,9 @@ void loop() {
         }
         case SETTING_TIME: {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
-                int8_t dir = (rButton != NO_PRESS) -(lButton != NO_PRESS);
+                int8_t dir = (rButton != NO_PRESS) - (lButton != NO_PRESS);
 
-                switch(selection) {
+                switch (selection) {
                     case 0:
                         rtc.adjust(now + TimeSpan(0, dir, 0, 0));
                         break;
@@ -280,13 +307,10 @@ void loop() {
         }
         case SETTING_DATE: {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
-                int8_t dir = (rButton != NO_PRESS) -(lButton != NO_PRESS);
+                int8_t dir = (rButton != NO_PRESS) - (lButton != NO_PRESS);
 
-                switch(selection) {
-                    case 0:
-                        rtc.adjust(now + TimeSpan(dir, 0, 0, 0));
-                        break;
-                    case 1: {
+                switch (selection) {
+                    case 0: {
                         uint16_t year = now.year();
                         uint16_t month = now.month();
                         if ((month == 12) && (dir == 1)) {
@@ -301,6 +325,9 @@ void loop() {
                         rtc.adjust(DateTime(year, month, now.day(), now.hour(), now.minute(), now.second()));
                         break;
                     }
+                    case 1:
+                        rtc.adjust(now + TimeSpan(dir, 0, 0, 0));
+                        break;
                     case 2: {
                         uint16_t year = now.year();
                         if ((year == 9999) && (dir == 1)) {
@@ -337,9 +364,10 @@ void loop() {
         }
         case SETTING_ALARM: {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
+                rang = false;
                 int8_t dir = ((int8_t) (rButton != NO_PRESS)) - ((int8_t) (lButton != NO_PRESS));
 
-                switch(selection) {
+                switch (selection) {
                     case 0:
                         alarm = alarm + TimeSpan(0, dir, 0, 0);
                         break;
@@ -367,6 +395,8 @@ void loop() {
         case SETTING_ALARM_DAYS: {
             if (rButton != NO_PRESS) {
                 alarmDays[selection] = true;
+            } else if (lButton != NO_PRESS) {
+                alarmDays[selection] = false;
             }
 
             if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
@@ -394,8 +424,58 @@ void loop() {
             break;
     }
 
+    // Alarm Ring Handling
+    if (alarmDays[now.dayOfTheWeek()]) {
+        TimeSpan diff = alarm - now;
+        if (diff.hours() == 0 && !rang) {
+            int16_t secs = (diff.minutes() * 60) + diff.seconds();
+            static bool notified = false;
+
+            if (secs <= 60 && !notified) {
+                tone(BUZZER_PIN, 1000, 250);
+                notified = true;
+            }
+
+            if ((secs <= 60) && (secs > 0)) {
+                if ((sButton == LONG_PRESS) && !snoozed) {
+                    snoozed = true;
+                    notified = false;
+                    tone(BUZZER_PIN, 1000, 500);
+                    alarm = alarm + TimeSpan(0, 0, 5, 0);
+                }
+            }
+
+            if ((secs <= 5) && (secs > 0)) {
+                static uint8_t counted = 6;
+                if (counted != secs) {
+                    tone(BUZZER_PIN, 1000, 500);
+                    counted = secs;
+                }
+            }
+
+            if (secs <= 0) {
+                tone(BUZZER_PIN, 1250, 20);
+            }
+
+            if (secs <= -5) {
+                rang = true;
+                snoozed = false;
+            }
+
+            if (secs > 0) {
+                display.showNumberDecEx(diff.minutes(), 0b01000000, true, 2, 0);
+                display.showNumberDecEx(diff.seconds(), 0b01000000, true, 2, 2);
+            } else {
+                display.showNumberDecEx(0, 0b01000000, true, 2, 0);
+                display.showNumberDecEx(0, 0b01000000, true, 2, 2);
+            }
+
+        }
+    }
+
     loopCount++;
-    if ((millis() - loopStart) < LOOP_DELAY) {
-        delay(LOOP_DELAY - (millis() - loopStart));
+    uint32_t loopTime = millis() - loopStart;
+    if (loopTime < LOOP_DELAY) {
+        delay(LOOP_DELAY - loopTime);
     }
 }
