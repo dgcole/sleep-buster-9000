@@ -1,4 +1,5 @@
 EESchema Schematic File Version 4
+LIBS:Schematics for board-cache
 EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
@@ -146,7 +147,7 @@ Wire Wire Line
 	10000 2300 10100 2300
 Wire Wire Line
 	10100 2400 10000 2400
-Text Label 5850 3900 0    50   ~ 0
+Text Label 5850 4100 0    50   ~ 0
 SCL
 Text Label 5850 4000 0    50   ~ 0
 SDA
@@ -463,7 +464,7 @@ A1
 Text Label 1150 2150 2    50   ~ 0
 A2
 Text Label 1150 2450 2    50   ~ 0
-A5
+A3
 Text Label 1150 2750 2    50   ~ 0
 A6
 Wire Wire Line
@@ -478,8 +479,8 @@ Text Label 5850 3700 0    50   ~ 0
 A1
 Text Label 5850 3800 0    50   ~ 0
 A2
-Text Label 5850 4100 0    50   ~ 0
-A5
+Text Label 5850 3900 0    50   ~ 0
+A3
 Text Label 5850 4200 0    50   ~ 0
 A6
 Wire Wire Line
@@ -719,4 +720,6 @@ Text Label 4600 4200 2    50   ~ 0
 D12
 Wire Wire Line
 	4600 4200 4750 4200
+Wire Wire Line
+	4600 3700 4750 3700
 $EndSCHEMATC
