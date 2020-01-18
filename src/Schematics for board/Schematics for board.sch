@@ -581,7 +581,7 @@ Text Notes 7100 1500 0    50   ~ 0
 Buzzer
 Text Notes 7950 2400 0    50   ~ 0
 Pot(entiometer)
-Text Notes 11300 50   0    50   ~ 0
+Text Notes 9850 1700 0    50   ~ 0
 RTC Breakout board
 Text Notes 1750 4250 0    50   ~ 0
 Motor Driver
@@ -634,32 +634,32 @@ Wire Wire Line
 $Comp
 L Device:LED_RGBC D?
 U 1 1 5E29F059
-P 7450 4350
-F 0 "D?" H 7450 4847 50  0000 C CNN
-F 1 "LED_RGBC" H 7450 4756 50  0000 C CNN
-F 2 "" H 7450 4300 50  0001 C CNN
-F 3 "~" H 7450 4300 50  0001 C CNN
-	1    7450 4350
+P 14600 -4850
+F 0 "D?" H 14600 -4353 50  0000 C CNN
+F 1 "LED_RGBC" H 14600 -4444 50  0000 C CNN
+F 2 "" H 14600 -4900 50  0001 C CNN
+F 3 "~" H 14600 -4900 50  0001 C CNN
+	1    14600 -4850
 	1    0    0    -1  
 $EndComp
 $Comp
 L power:GND #PWR?
 U 1 1 5E2A0FE1
-P 7100 4350
-F 0 "#PWR?" H 7100 4100 50  0001 C CNN
-F 1 "GND" V 7105 4222 50  0000 R CNN
-F 2 "" H 7100 4350 50  0001 C CNN
-F 3 "" H 7100 4350 50  0001 C CNN
-	1    7100 4350
+P 14250 -4850
+F 0 "#PWR?" H 14250 -5100 50  0001 C CNN
+F 1 "GND" V 14255 -4978 50  0000 R CNN
+F 2 "" H 14250 -4850 50  0001 C CNN
+F 3 "" H 14250 -4850 50  0001 C CNN
+	1    14250 -4850
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	7100 4350 7250 4350
-Text Label 7850 4150 0    50   ~ 0
+	14250 -4850 14400 -4850
+Text Label 15000 -5050 0    50   ~ 0
 D9
-Text Label 7850 4350 0    50   ~ 0
+Text Label 15000 -4850 0    50   ~ 0
 D10
-Text Label 7850 4550 0    50   ~ 0
+Text Label 15000 -4650 0    50   ~ 0
 D11
 Text Label 4600 3900 2    50   ~ 0
 D9
@@ -674,11 +674,11 @@ Wire Wire Line
 Wire Wire Line
 	4600 4100 4750 4100
 Wire Wire Line
-	7850 4550 7650 4550
+	15000 -4650 14800 -4650
 Wire Wire Line
-	7650 4350 7850 4350
+	14800 -4850 15000 -4850
 Wire Wire Line
-	7850 4150 7650 4150
+	15000 -5050 14800 -5050
 Text Label 4600 3500 2    50   ~ 0
 D5
 Text Label 4600 3600 2    50   ~ 0
@@ -697,7 +697,7 @@ NoConn ~ 4950 6500
 NoConn ~ 4950 6600
 NoConn ~ 4950 6700
 NoConn ~ 4950 6800
-Text Notes 7300 3750 0    50   ~ 0
+Text Notes 6850 2850 0    50   ~ 0
 RGB LED\n
 $Comp
 L power:GND #PWR?
@@ -722,4 +722,93 @@ Wire Wire Line
 	4600 4200 4750 4200
 Wire Wire Line
 	4600 3700 4750 3700
+$Comp
+L LED:WS2812B D?
+U 1 1 5E237EF2
+P 7000 3450
+F 0 "D?" H 7200 3850 50  0000 L CNN
+F 1 "WS2812B" H 7050 3750 50  0000 L CNN
+F 2 "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm" H 7050 3150 50  0001 L TNN
+F 3 "https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf" H 7100 3075 50  0001 L TNN
+	1    7000 3450
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+5V #PWR?
+U 1 1 5E23B953
+P 7000 3100
+F 0 "#PWR?" H 7000 2950 50  0001 C CNN
+F 1 "+5V" H 7015 3273 50  0000 C CNN
+F 2 "" H 7000 3100 50  0001 C CNN
+F 3 "" H 7000 3100 50  0001 C CNN
+	1    7000 3100
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7000 3100 7000 3150
+$Comp
+L power:GND #PWR?
+U 1 1 5E23EF52
+P 7000 3850
+F 0 "#PWR?" H 7000 3600 50  0001 C CNN
+F 1 "GND" H 7005 3677 50  0000 C CNN
+F 2 "" H 7000 3850 50  0001 C CNN
+F 3 "" H 7000 3850 50  0001 C CNN
+	1    7000 3850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7000 3850 7000 3750
+NoConn ~ 7300 3450
+Text Label 6550 3450 2    50   ~ 0
+D9
+Wire Wire Line
+	6550 3450 6700 3450
+$Comp
+L Display_Character:4-dig-7-seg U?
+U 1 1 5E24E4E3
+P 8100 4750
+F 0 "U?" H 8328 4371 50  0000 L CNN
+F 1 "4-dig-7-seg" H 8328 4280 50  0000 L CNN
+F 2 "" H 8100 4750 50  0001 C CNN
+F 3 "" H 8100 4750 50  0001 C CNN
+	1    8100 4750
+	1    0    0    -1  
+$EndComp
+Text Notes 7600 4800 0    50   ~ 0
+4 digit 7 segment display
+$Comp
+L power:+5V #PWR?
+U 1 1 5E25304D
+P 7600 5100
+F 0 "#PWR?" H 7600 4950 50  0001 C CNN
+F 1 "+5V" H 7615 5273 50  0000 C CNN
+F 2 "" H 7600 5100 50  0001 C CNN
+F 3 "" H 7600 5100 50  0001 C CNN
+	1    7600 5100
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	7600 5100 7750 5100
+$Comp
+L power:GND #PWR?
+U 1 1 5E2560D2
+P 7700 5000
+F 0 "#PWR?" H 7700 4750 50  0001 C CNN
+F 1 "GND" H 7705 4827 50  0000 C CNN
+F 2 "" H 7700 5000 50  0001 C CNN
+F 3 "" H 7700 5000 50  0001 C CNN
+	1    7700 5000
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	7700 5000 7750 5000
+Text Label 7700 5200 2    50   ~ 0
+D10
+Text Label 7700 5300 2    50   ~ 0
+D11
+Wire Wire Line
+	7700 5200 7750 5200
+Wire Wire Line
+	7750 5300 7700 5300
 $EndSCHEMATC
