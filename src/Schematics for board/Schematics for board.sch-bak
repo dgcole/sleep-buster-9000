@@ -1,4 +1,5 @@
 EESchema Schematic File Version 4
+LIBS:Schematics for board-cache
 EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
@@ -719,4 +720,6 @@ Text Label 4600 4200 2    50   ~ 0
 D12
 Wire Wire Line
 	4600 4200 4750 4200
+Wire Wire Line
+	4600 3700 4750 3700
 $EndSCHEMATC
