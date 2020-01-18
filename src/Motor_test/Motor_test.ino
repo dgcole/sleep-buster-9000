@@ -35,14 +35,9 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  OnOff(1000, 1000, 1);
+  OnOff(10000, 1000, 1);
   delay(500);
-  OnOff(100, 100, 5);
-  delay(500);
-  OnOff(50, 50, 10);
-  delay(500);
-  OnOff(25, 25, 20);
-  delay(500);
+
 
 }
 
