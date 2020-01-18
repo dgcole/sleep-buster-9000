@@ -84,14 +84,17 @@ DateTime alarm(0, 0, 0, 0, 0, 0);
 // Alarm set days
 bool alarmDays[7] = {true, false, true, false, true, false, true};
 
-// Represents selection number when setting day / time / alarm time / alarm days.
+// Represents selection number when setting day / time / alarm time / alarm days
 uint8_t selection = 0;
 
 // Represents # of loop calls
 uint32_t loopCount = 0;
 
-// Whether or not the alarm has been snoozed.
+// Whether or not the alarm has been snoozed
 bool snoozed = false;
+
+// Whether or not alarm has rung
+bool rang = false;
 
 // Draw a string centered within a row on the 16x2 LCD
 void drawCentered(const char *str, uint8_t row) {
@@ -206,13 +209,15 @@ void setup() {
 
     display.setBrightness(0x0f);
     display.clear();
-
-    //TODO; Remove.
-    alarm = rtc.now() + TimeSpan(0, 0, 1, 15);
 }
 
 void loop() {
     DateTime now = rtc.now();
+
+    // Reset alarm
+    if ((now.hour() == 0) && (now.minute() == 0) && (now.second() == 0) && rang) {
+        rang = false;
+    }
     uint32_t loopStart = millis();
 
     Press lButton = getButtonPressState(LEFT_BUTTON_PIN, false);
@@ -359,6 +364,7 @@ void loop() {
         }
         case SETTING_ALARM: {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
+                rang = false;
                 int8_t dir = ((int8_t) (rButton != NO_PRESS)) - ((int8_t) (lButton != NO_PRESS));
 
                 switch (selection) {
@@ -421,27 +427,49 @@ void loop() {
     // Alarm Ring Handling
     if (alarmDays[now.dayOfTheWeek()]) {
         TimeSpan diff = alarm - now;
-        if (diff.hours() == 0) {
-
-            uint16_t secs = (diff.minutes() * 60) + diff.seconds();
+        if (diff.hours() == 0 && !rang) {
+            int16_t secs = (diff.minutes() * 60) + diff.seconds();
             static bool notified = false;
 
-            if (secs == 60 && !notified) {
+            if (secs <= 60 && !notified) {
                 tone(BUZZER_PIN, 1000, 250);
                 notified = true;
             }
 
-            if (secs <= 60) {
+            if ((secs <= 60) && (secs > 0)) {
                 if ((sButton == LONG_PRESS) && !snoozed) {
                     snoozed = true;
                     notified = false;
+                    tone(BUZZER_PIN, 1000, 500);
                     alarm = alarm + TimeSpan(0, 0, 5, 0);
                 }
             }
 
-            //display.clear();
-            display.showNumberDecEx(diff.minutes(), 0b01000000, true, 2, 0);
-            display.showNumberDecEx(diff.seconds(), 0b01000000, true, 2, 2);
+            if ((secs <= 5) && (secs > 0)) {
+                static uint8_t counted = 6;
+                if (counted != secs) {
+                    tone(BUZZER_PIN, 1000, 500);
+                    counted = secs;
+                }
+            }
+
+            if (secs <= 0) {
+                tone(BUZZER_PIN, 1250, 20);
+            }
+
+            if (secs <= -5) {
+                rang = true;
+                snoozed = false;
+            }
+
+            if (secs > 0) {
+                display.showNumberDecEx(diff.minutes(), 0b01000000, true, 2, 0);
+                display.showNumberDecEx(diff.seconds(), 0b01000000, true, 2, 2);
+            } else {
+                display.showNumberDecEx(0, 0b01000000, true, 2, 0);
+                display.showNumberDecEx(0, 0b01000000, true, 2, 2);
+            }
+
         }
     }
 
