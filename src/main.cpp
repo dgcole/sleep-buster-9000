@@ -398,7 +398,6 @@ void loop() {
         }
         case SETTING_ALARM: {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
-                rang = false;
                 int8_t dir = ((int8_t) (rButton != NO_PRESS)) - ((int8_t) (lButton != NO_PRESS));
 
                 // Adjust alarm hour / minute / second
@@ -415,6 +414,11 @@ void loop() {
                     default:
                         break;
                 }
+
+                // If the alarm is in the past, we want to set rang to true. If it's in the future, then it hasn't rung
+                // yet.
+                DateTime alarmToday = DateTime(now.year(), now.month(), now.day(), alarm.hour(), alarm.minute(), alarm.second());
+                rang = (alarmToday <= now);
             }
 
             if ((loopCount % (LCD_REFRESH_RATE / LOOP_DELAY)) == 0) {
