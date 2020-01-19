@@ -142,7 +142,7 @@ Wire Wire Line
 Text Label 10000 2300 2    50   ~ 0
 A4
 Text Label 10000 2400 2    50   ~ 0
-A3
+A5
 Wire Wire Line
 	10000 2300 10100 2300
 Wire Wire Line
