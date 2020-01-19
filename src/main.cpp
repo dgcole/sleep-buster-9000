@@ -472,6 +472,7 @@ void loop() {
         if (((diff.hours() % 24) == 0) && !rang) {
             int16_t secs = (diff.minutes() * 60) + diff.seconds();
             static bool notified = false;
+            static bool motorEnabled = false;
 
             // If there is less than a minute left, notify the user with a beep.
             if ((secs <= 60) && (secs > 0) && !notified) {
@@ -501,7 +502,6 @@ void loop() {
 
             // Ring the alarm
             if (secs <= 0) {
-                static bool motorEnabled = false;
                 tone(BUZZER_PIN, 1250, 20);
 
                 // Start up motor
@@ -513,10 +513,12 @@ void loop() {
                 }
             }
 
-            // Shut down the motor
+            // Shut down the motor and clean up
             if (secs <= -5) {
                 rang = true;
                 snoozed = false;
+                notified = false;
+                motorEnabled = false;
 
                 digitalWrite(MOTOR_PIN, LOW);
                 digitalWrite(WATER_LED_PIN, LOW);
