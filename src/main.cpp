@@ -54,6 +54,7 @@
 // Water Level Warning LED Pin
 #define WATER_LED_PIN 9
 
+// Pages for the 16x2 LCD Display
 enum Page {
     STANDBY,
     SETTING_TIME,
@@ -62,14 +63,17 @@ enum Page {
     SETTING_ALARM_DAYS
 };
 
+// Types of button presses
 enum Press {
     NO_PRESS,
     SHORT_PRESS,
     LONG_PRESS
 };
 
+// Day abbreviations
 const char daysOfTheWeek[7] = {'S', 'M', 'T', 'W', 'R', 'F', 'S'};
 
+// LCD panel
 LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 
 // Current state for state machine in loop()
@@ -129,12 +133,15 @@ void drawScroll(const char *str, uint8_t row, uint16_t rate) {
     uint8_t offset = realOffset / rate;
     uint8_t len = strlen(str);
 
+    // Take largest possible chunk of remaining text.
     char buf[LCD_LENGTH + 1];
     uint8_t pos = 0;
     pos = min(len - offset, LCD_LENGTH);
     strncpy(buf, &str[offset], pos);
 
+    // Fill scroll text completely
     while (pos < (LCD_LENGTH)) {
+        // Take chunk of next scroll
         uint8_t nextLen = min((LCD_LENGTH) - pos, (int) len);
         strncpy(&buf[pos], str, nextLen);
         pos += nextLen;
@@ -144,6 +151,7 @@ void drawScroll(const char *str, uint8_t row, uint16_t rate) {
     lcd.setCursor(0, 1);
     lcd.print(buf);
 
+    // realOffset rolls over at (rate * len) so that (realOffset / rate) is smooth.
     realOffset++;
     if (realOffset == (rate * len)) {
         realOffset = 0;
@@ -153,27 +161,33 @@ void drawScroll(const char *str, uint8_t row, uint16_t rate) {
 void setScroll(char *str, DateTime now) {
     int pos = 0;
 
+    // Generate date / alarm time scroll text.
     snprintf(str, SCROLL_LENGTH, "%02d/%02d/%04d ALARM: %02d:%02d:%02d ", now.month(), now.day(), now.year(),
              alarm.hour(), alarm.minute(), alarm.second());
     pos = strlen(str);
 
+    // Add alarm days to scroll text
     char *end = &str[pos];
     for (uint8_t i = 0; i < 7; i++) {
         if (alarmDays[i]) {
+            // Active days blink.
             if (((loopCount / (LCD_REFRESH_RATE / LOOP_DELAY)) % (2 * BLINK_RATE)) < BLINK_RATE) {
                 *(end++) = daysOfTheWeek[i];
             } else {
                 *(end++) = ' ';
             }
         } else {
+            // Inactive days are solid.
             *(end++) = daysOfTheWeek[i];
         }
     }
+    // The space serves as padding for the continuous scroll.
     *end++ = ' ';
     *end = '\0';
 }
 
 Press getButtonPressState(uint8_t pin, bool on) {
+    // Keep track of A0-A7 and how many calls to this function they have been pressed for.
     static uint16_t downFor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t index = pin - A0;
@@ -185,6 +199,7 @@ Press getButtonPressState(uint8_t pin, bool on) {
             return LONG_PRESS;
         }
     } else {
+        // Button has been released, check if it qualifies as a short press.
         uint16_t last = downFor[index];
         downFor[index] = 0;
         if ((last > (SHORT_PRESS_TIME / LOOP_DELAY)) && (last < (LONG_PRESS_TIME / LOOP_DELAY))) {
@@ -220,25 +235,24 @@ void setup() {
 
     display.setBrightness(0x0f);
     display.clear();
-
-    alarm = rtc.now() + TimeSpan(0, 0, 0, 15);
 }
 
 void loop() {
     DateTime now = rtc.now();
 
-    // Reset alarm
+    // Reset alarm at midnight
     if ((now.hour() == 0) && (now.minute() == 0) && (now.second() == 0) && rang) {
         rang = false;
     }
     uint32_t loopStart = millis();
 
+    // Get state of buttons.
     Press lButton = getButtonPressState(LEFT_BUTTON_PIN, true);
     Press mButton = getButtonPressState(MIDDLE_BUTTON_PIN, true);
     Press rButton = getButtonPressState(RIGHT_BUTTON_PIN, true);
     Press sButton = getButtonPressState(SNOOZE_BUTTON_PIN, false);
 
-    // Update selection
+    // Update selection of item on page
     if (mButton == SHORT_PRESS) {
         uint8_t selectionMax = 0;
         switch (currState) {
@@ -293,6 +307,7 @@ void loop() {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
                 int8_t dir = (rButton != NO_PRESS) - (lButton != NO_PRESS);
 
+                // Adjust hours / minutes / seconds by dir.
                 switch (selection) {
                     case 0:
                         rtc.adjust(now + TimeSpan(0, dir, 0, 0));
@@ -322,10 +337,12 @@ void loop() {
             if ((lButton != NO_PRESS) || (rButton != NO_PRESS)) {
                 int8_t dir = (rButton != NO_PRESS) - (lButton != NO_PRESS);
 
+                // Adjust day / month / year
                 switch (selection) {
                     case 0: {
                         uint16_t year = now.year();
                         uint16_t month = now.month();
+                        // Account for increments from December / decrements from January.
                         if ((month == 12) && (dir == 1)) {
                             year++;
                             month = 1;
@@ -343,6 +360,7 @@ void loop() {
                         break;
                     case 2: {
                         uint16_t year = now.year();
+                        // Only allow years that are four digits max b/c that's how they are padded on the scroll
                         if ((year == 9999) && (dir == 1)) {
                             year = 0;
                         } else if ((year == 0) && (dir == -1)) {
@@ -380,6 +398,7 @@ void loop() {
                 rang = false;
                 int8_t dir = ((int8_t) (rButton != NO_PRESS)) - ((int8_t) (lButton != NO_PRESS));
 
+                // Adjust alarm hour / minute / second
                 switch (selection) {
                     case 0:
                         alarm = alarm + TimeSpan(0, dir, 0, 0);
@@ -406,6 +425,7 @@ void loop() {
             break;
         }
         case SETTING_ALARM_DAYS: {
+            // Turn alarm days on / off
             if (rButton != NO_PRESS) {
                 alarmDays[selection] = true;
             } else if (lButton != NO_PRESS) {
@@ -416,10 +436,12 @@ void loop() {
                 char dayBuf[14] = "             ";
                 for (uint8_t i = 0; i < 7; i++) {
                     if (alarmDays[i]) {
+                        // Selected days blink
                         if (((loopCount / (LCD_REFRESH_RATE / LOOP_DELAY)) % (2 * BLINK_RATE)) < BLINK_RATE) {
                             dayBuf[i * 2] = daysOfTheWeek[i];
                         }
                     } else {
+                        // Non-selected days are solid
                         dayBuf[i * 2] = daysOfTheWeek[i];
                     }
                 }
@@ -444,11 +466,13 @@ void loop() {
             int16_t secs = (diff.minutes() * 60) + diff.seconds();
             static bool notified = false;
 
+            // If there is less than a minute left, notify the user with a beep.
             if (secs <= 60 && !notified) {
                 tone(BUZZER_PIN, 1000, 250);
                 notified = true;
             }
 
+            // If there is less than a minute and the alarm hasn't started ringing yet, it can be snoozed once.
             if ((secs <= 60) && (secs > 0)) {
                 if ((sButton == LONG_PRESS) && !snoozed) {
                     snoozed = true;
@@ -458,6 +482,7 @@ void loop() {
                 }
             }
 
+            // Buzz for each second between 5 and 0.
             if ((secs <= 5) && (secs > 0)) {
                 static uint8_t counted = 6;
 
@@ -467,22 +492,30 @@ void loop() {
                 }
             }
 
+            // Ring the alarm
             if (secs <= 0) {
                 static bool motorEnabled = false;
                 tone(BUZZER_PIN, 1250, 20);
 
+                // Start up motor
                 if (!motorEnabled) {
                     digitalWrite(MOTOR_PIN, HIGH);
+                    digitalWrite(WATER_LED_PIN, HIGH);
+
                     motorEnabled = true;
                 }
             }
 
+            // Shut down the motor
             if (secs <= -5) {
                 rang = true;
                 snoozed = false;
+
                 digitalWrite(MOTOR_PIN, LOW);
+                digitalWrite(WATER_LED_PIN, LOW);
             }
 
+            // Display remaining time to alarm
             if (secs > 0) {
                 display.showNumberDecEx(diff.minutes(), 0b01000000, true, 2, 0);
                 display.showNumberDecEx(diff.seconds(), 0b01000000, true, 2, 2);
