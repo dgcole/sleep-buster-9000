@@ -1,3 +1,5 @@
-# Squirter 9000
+# Sleep Buster 9000
 
-Source code for a very fun Arduino Nano-based alarm clock that squirts you.
+Created for [Hack@WPI 2020](https://hack.wpi.edu/)
+
+A fully functional alarm clock that squirts the user.
