@@ -294,6 +294,12 @@ void loop() {
         selection = 0; // Reset selection when switching page.
     }
 
+    // Quick way to set an alarm very soon for demonstration purposes.
+    if (rButton == LONG_PRESS) {
+        rang = false;
+        alarm = rtc.now() + TimeSpan(0, 0, 0, 15);
+    }
+
     // Page State Machine
     switch (currState) {
         case STANDBY: {
