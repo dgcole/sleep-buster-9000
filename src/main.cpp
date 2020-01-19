@@ -16,7 +16,7 @@
 #define SCROLL_LENGTH 64
 
 // How frequently (intervals of LCD_REFRESH_RATE) to scroll the text
-#define SCROLL_RATE 4
+#define SCROLL_RATE 2
 
 // How frequently (intervals of LCD_REFRESH_RATE) to blink selections
 #define BLINK_RATE 4
@@ -25,7 +25,7 @@
 #define SHORT_PRESS_TIME 50
 
 // Long press time threshold (milliseconds)
-#define LONG_PRESS_TIME 1500
+#define LONG_PRESS_TIME 1000
 
 // Pins for LCD
 #define LCD_RS  4
@@ -89,7 +89,7 @@ RTC_PCF8523 rtc;
 TM1637Display display(TM1637_CLK, TM1637_DIO);
 
 // Alarm time
-DateTime alarm(0, 0, 0, 0, 0, 0);
+DateTime alarm;
 
 // Alarm set days
 bool alarmDays[7] = {true, false, true, false, true, false, true};
