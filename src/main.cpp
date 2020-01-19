@@ -235,6 +235,9 @@ void setup() {
 
     display.setBrightness(0x0f);
     display.clear();
+
+    DateTime now = rtc.now();
+    alarm = DateTime(now.year(), now.month(), now.day(), 12, 0, 0);
 }
 
 void loop() {
@@ -460,14 +463,14 @@ void loop() {
     }
 
     // Alarm Ring Handling
-    if (alarmDays[now.dayOfTheWeek()]) {
+    if ((currState != SETTING_ALARM) && alarmDays[now.dayOfTheWeek()]) {
         TimeSpan diff = alarm - now;
-        if (diff.hours() == 0 && !rang) {
+        if (((diff.hours() % 24) == 0) && !rang) {
             int16_t secs = (diff.minutes() * 60) + diff.seconds();
             static bool notified = false;
 
             // If there is less than a minute left, notify the user with a beep.
-            if (secs <= 60 && !notified) {
+            if ((secs <= 60) && (secs > 0) && !notified) {
                 tone(BUZZER_PIN, 1000, 250);
                 notified = true;
             }
